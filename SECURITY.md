@@ -14,17 +14,21 @@ live metrics. It did not treat the same-origin monitor hub as an untrusted serve
 - The source contains no `dangerouslySetInnerHTML`, `innerHTML`, `eval`, `new Function`, remote script,
   remote stylesheet, or user-controlled external URL sink. React text rendering escapes node names,
   notices, API errors, and all other hub-provided strings.
-- HTTP requests and the live WebSocket stay on the page's origin. The theme does not store or transmit
-  an agent token, session token, or other credential.
+- Status data and the live WebSocket stay on the page's origin. The optional `/network` diagnostics
+  route connects directly to public IP, split-routing, DNS, STUN and connectivity targets without
+  credentials. Results remain in memory and are never sent to the monitor hub.
 - The document applies a restrictive Content Security Policy: scripts, fonts and images are local;
-  objects and base URLs are disabled. Inline styles remain enabled because charts and data-driven
-  visual indicators use React style properties; inline scripts remain disabled.
-- Node detail routes now accept only the exact `/node/{integer}` shape. Unexpected suffixes do not get
-  interpreted as another node ID.
+  objects and base URLs are disabled. HTTPS connections are allowed for the diagnostics route. Inline
+  styles remain enabled because charts, map points and data-driven indicators use React style properties;
+  inline scripts remain disabled.
+- Node detail routes accept only the exact `/server/{8 lowercase hexadecimal characters}` shape. The
+  short MD5 key avoids exposing sequential IDs in URLs, but is an identifier rather than an access control.
 - Malformed metric objects are isolated to their node, and invalid country values fall back to the
   bundled placeholder flag instead of crashing the page.
 - Live snapshots are reconciled by node ID and value. Unchanged records retain object identity, so an
   automatic refresh updates data without remounting the page shell or resetting UI state.
+- Network and map modules are split from the entry bundle and load only when their route or dialog is
+  opened. In-flight diagnostics are aborted when the page unmounts.
 - `package-lock.json` is committed, CI uses `npm ci`, and release archives are generated only after the
   test, lint, build and package-verification steps pass.
 
@@ -36,3 +40,6 @@ live metrics. It did not treat the same-origin monitor hub as an untrusted serve
   element cannot enforce them. Set that header in Nginx or the hub if clickjacking protection is required.
 - Keep dependencies and the Node.js runtime current, and rerun both production and full `npm audit`
   checks before every release.
+- Browser diagnostics reveal the visitor's public network path to the selected third-party targets by
+  design. Their buttons are explicit, IP values are masked by default, and no diagnostic request carries
+  cookies or a referrer.

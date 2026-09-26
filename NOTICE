@@ -1,0 +1,9 @@
+This product includes adapted code and assets from NezhaDash:
+https://github.com/dcdsnotes/NezhaDash
+
+Copyright 2026 dcdsnotes and NezhaDash contributors
+Licensed under the Apache License, Version 2.0. A copy of that license is
+available at https://www.apache.org/licenses/LICENSE-2.0.
+
+Adapted files include the dotted world map asset, country coordinate data,
+and the browser-side MD5 route-key implementation.

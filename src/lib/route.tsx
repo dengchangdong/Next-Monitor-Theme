@@ -1,26 +1,29 @@
 import { useEffect, useState, type ComponentProps } from "react"
 
-const read = () => {
-  const match = location.pathname.match(/^\/node\/(\d+)\/?$/)
-  return match ? Number(match[1]) : null
+export type AppRoute = { kind: "home" } | { kind: "network" } | { kind: "server"; key: string } | { kind: "missing" }
+
+const read = (): AppRoute => {
+  if (location.pathname === "/" || location.pathname === "") return { kind: "home" }
+  if (/^\/network\/?$/.test(location.pathname)) return { kind: "network" }
+  const match = location.pathname.match(/^\/server\/([a-f0-9]{8})\/?$/)
+  return match ? { kind: "server", key: match[1] } : { kind: "missing" }
 }
 
 /**
- * The node `/node/{id}` names, or null on the list. The hub serves index.html for
- * any unknown path, so a reload or a shared link lands on the same page without a
- * server-side route.
+ * The public routes are exact. The hub serves index.html for unknown paths, so a
+ * reload or shared detail link still reaches this client-side resolver.
  */
-export function useNodeRoute() {
-  const [id, setId] = useState(read)
+export function useRoute() {
+  const [route, setRoute] = useState(read)
   useEffect(() => {
-    const sync = () => setId(read())
+    const sync = () => setRoute(read())
     addEventListener("popstate", sync)
     return () => removeEventListener("popstate", sync)
   }, [])
-  return id
+  return route
 }
 
-/** Announced as a popstate, so every `useNodeRoute` hears it the way it hears back. */
+/** Announced as a popstate, so `useRoute` hears it the way it hears back. */
 function navigate(href: string) {
   history.pushState({}, "", href)
   dispatchEvent(new PopStateEvent("popstate"))

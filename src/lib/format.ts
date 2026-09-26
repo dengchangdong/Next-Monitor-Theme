@@ -132,7 +132,7 @@ export function expiresIn(node: { expires_at: string | null; expires_in?: number
  */
 export const FOREVER = "∞"
 
-const SYMBOLS: Record<string, string> = { USD: "$", CNY: "¥", EUR: "€", GBP: "£", JPY: "¥" }
+const SYMBOLS: Record<string, string> = { USD: "$", CAD: "C$", CNY: "¥", EUR: "€", GBP: "£", JPY: "¥" }
 
 export function money(amount: number, currency: string): string {
   return `${SYMBOLS[currency] ?? ""}${amount.toFixed(2)}${SYMBOLS[currency] ? "" : ` ${currency}`}`

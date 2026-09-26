@@ -8,6 +8,7 @@
 
 - 窄幅状态流首页，展示系统状态、实时吞吐、节点列表、平均资源和续费概览
 - 节点搜索、分组、状态筛选与多字段排序
+- 节点地图弹窗，以及网页出口、网站分流、连通性、DNS 和 WebRTC 检测
 - 节点详情、资源环图、速度历史和网络延迟监控
 - 桌面、平板和移动端响应式布局
 - 图表与国旗资源按需加载，降低首页脚本体积
@@ -32,15 +33,16 @@
 
 ```text
 nezhadash/
+├── NOTICE
 ├── theme.json
 ├── preview.png
 └── dist/
     └── index.html
 ```
 
-发布时将 `dist`、`theme.json` 和 `preview.png` 打入 `theme.tar.gz`，在 hub 后台主题页面上传；也可以把整个 `nezhadash` 目录放到 hub 的 `--themes` 目录。
+发布时将 `dist`、`theme.json`、`preview.png` 和 `NOTICE` 打入 `theme.tar.gz`，在 hub 后台主题页面上传；也可以把整个 `nezhadash` 目录放到 hub 的 `--themes` 目录。
 
-主题前端路由为 `/` 和 `/node/{id}`。反向代理或 WAF 使用路径白名单时，需要放行 `/node/`，否则详情页刷新可能被拦截。
+主题前端路由为 `/`、`/network` 和 `/server/{key}`，其中 `key` 为服务器 ID 的 MD5 值前 8 位。反向代理或 WAF 使用路径白名单时，需要放行 `/network` 与 `/server/`，否则页面刷新可能被拦截。
 
 ## 开发
 
@@ -62,8 +64,8 @@ npm run check:theme
 
 安全威胁模型、依赖审计和剩余风险见 [`SECURITY.md`](SECURITY.md)。
 
-主题只访问官方契约中的同源接口：`/api/me`、`/api/nodes`、`/api/nodes/{id}/metrics`、`/api/ws` 和 `/api/themes/nezhadash/config`。
+主题首页只访问官方契约中的同源接口：`/api/me`、`/api/nodes`、`/api/nodes/{id}/metrics`、`/api/ws` 和 `/api/themes/nezhadash/config`。访问 `/network` 时，浏览器会直接连接页面列出的诊断目标；除公网 IP 外，所有外部检测均由用户手动触发。
 
 ## 许可
 
-MIT。国旗资源来自 [flag-icons](https://github.com/lipis/flag-icons)，采用 MIT 许可。
+MIT。国旗资源来自 [flag-icons](https://github.com/lipis/flag-icons)，采用 MIT 许可；地图、国家坐标与短路由算法改编自 Apache-2.0 许可的 [NezhaDash](https://github.com/dcdsnotes/NezhaDash)，详见 [`NOTICE`](NOTICE)。

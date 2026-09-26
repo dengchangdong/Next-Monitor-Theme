@@ -2,20 +2,22 @@ import {
   AlertCircle,
   ArrowDown,
   ArrowUp,
-  ChevronDown,
   ChevronRight,
   Filter,
+  ListFilter,
   Search,
   Server as ServerIcon,
-  X,
 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 
+import { Dialog } from "@/components/Dialog"
+import { MenuSelect } from "@/components/MenuSelect"
 import { ServerFlag } from "@/components/ServerFlag"
 import { groupFilter, groupsOf, nodeMatchesGroup, type GroupFilter, type Node } from "@/lib/api"
 import type { ThemeConfig } from "@/lib/config"
 import { bytes, compact, expiresIn, percent, uptime } from "@/lib/format"
 import { Link } from "@/lib/route"
+import { serverIdToServerKey } from "@/lib/server-key"
 import { cn } from "@/lib/utils"
 
 type StatusFilter = "all" | "online" | "offline"
@@ -87,44 +89,6 @@ function PanelHeader({ title, description, action, id }: { title: string; descri
   )
 }
 
-function Dialog({ open, title, description, onClose, children }: {
-  open: boolean
-  title: string
-  description: string
-  onClose: () => void
-  children: ReactNode
-}) {
-  const ref = useRef<HTMLDialogElement>(null)
-
-  useEffect(() => {
-    const dialog = ref.current
-    if (!dialog) return
-    if (open && !dialog.open) dialog.showModal()
-    if (!open && dialog.open) dialog.close()
-  }, [open])
-
-  if (!open) return null
-  return (
-    <dialog
-      ref={ref}
-      className="dashboard-dialog"
-      onCancel={(event) => {
-        event.preventDefault()
-        onClose()
-      }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose()
-      }}
-    >
-      <div className="dashboard-dialog__header">
-        <div><h2>{title}</h2><p>{description}</p></div>
-        <button type="button" aria-label="关闭" onClick={onClose}><X /></button>
-      </div>
-      {children}
-    </dialog>
-  )
-}
-
 function NodeRow({ node }: { node: Node }) {
   const metrics = node.metrics
   const speedMetrics = node.online ? metrics : null
@@ -138,7 +102,7 @@ function NodeRow({ node }: { node: Node }) {
   const away = node.last_seen ? Math.max(0, Date.now() / 1000 - node.last_seen) : 0
 
   return (
-    <Link href={`/node/${node.id}`} className={cn("probe-node-item", !node.online && "probe-node-item--offline")} aria-label={`查看 ${node.name} 详情`}>
+    <Link href={`/server/${serverIdToServerKey(node.id)}`} className={cn("probe-node-item", !node.online && "probe-node-item--offline")} aria-label={`查看 ${node.name} 详情`}>
       <div className="probe-node-item__identity">
         <Dot node={node} />
         <Flag code={node.country} className="probe-node-item__flag" />
@@ -314,21 +278,28 @@ export function ServerTables({ nodes, config }: { nodes: Node[]; config: ThemeCo
               <span className="sr-only">搜索节点</span><Search aria-hidden="true" />
               <input id="node-search" type="search" value={query} placeholder="搜索节点" onChange={(event) => setQuery(event.target.value)} />
             </label>
-            <label className="status-controls__select" title="节点分组">
-              <Filter aria-hidden="true" />
-              <select aria-label="节点分组" value={activeGroup} onChange={(event) => setGroup(event.target.value as GroupFilter)}>
-                <option value="all">全部节点</option>
-                {nodes.some((node) => !(node.group ?? "")) && <option value="ungrouped">未分组</option>}
-                {groups.map((name) => <option key={name} value={groupFilter(name)}>{name}</option>)}
-              </select>
-              <ChevronDown aria-hidden="true" />
-            </label>
-            <label className="status-controls__select status-controls__sort" title="排序字段">
-              <select aria-label="排序字段" value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
-                <option value="sort">排序值</option><option value="name">节点名称</option><option value="cpu">CPU</option><option value="mem">内存</option><option value="disk">硬盘</option><option value="speed">网络速度</option><option value="expiry">到期时间</option>
-              </select>
-              <ChevronDown aria-hidden="true" />
-            </label>
+            <MenuSelect
+              value={activeGroup}
+              label="节点分组"
+              icon={Filter}
+              options={[
+                { value: "all", label: "全部节点", count: nodes.length },
+                ...(nodes.some((node) => !(node.group ?? "")) ? [{ value: "ungrouped" as const, label: "未分组", count: nodes.filter((node) => !(node.group ?? "")).length }] : []),
+                ...groups.map((name) => ({ value: groupFilter(name), label: name, count: nodes.filter((node) => node.group === name).length })),
+              ]}
+              onChange={setGroup}
+            />
+            <MenuSelect
+              value={sortKey}
+              label="排序字段"
+              icon={ListFilter}
+              className="menu-select--sort"
+              options={[
+                { value: "sort", label: "排序值" }, { value: "name", label: "节点名称" }, { value: "cpu", label: "CPU" },
+                { value: "mem", label: "内存" }, { value: "disk", label: "硬盘" }, { value: "speed", label: "网络速度" }, { value: "expiry", label: "到期时间" },
+              ]}
+              onChange={setSortKey}
+            />
             <button className="status-controls__direction" type="button" aria-label={direction === "asc" ? "当前升序，切换为降序" : "当前降序，切换为升序"} onClick={() => setDirection((value) => value === "asc" ? "desc" : "asc")}>
               {direction === "asc" ? <ArrowDown /> : <ArrowUp />}
             </button>
@@ -372,7 +343,7 @@ export function ServerTables({ nodes, config }: { nodes: Node[]; config: ThemeCo
       <Dialog open={renewalOpen} title="续费提醒" description="以下服务器将在 30 天内到期或已经过期" onClose={() => setRenewalOpen(false)}>
         <div className="status-renewal-list">
           {renewals.length ? renewals.map((item) => (
-            <Link key={item.id} href={`/node/${item.id}`} className="status-renewal-list__item" onClick={() => setRenewalOpen(false)}>
+            <Link key={item.id} href={`/server/${serverIdToServerKey(item.id)}`} className="status-renewal-list__item" onClick={() => setRenewalOpen(false)}>
               <span><AlertCircle aria-hidden="true" /><strong>{item.name}</strong></span>
               <span><small>{item.date}</small><strong className={cn(item.days < 0 && "is-expired")}>{item.days < 0 ? "已过期" : `剩余 ${item.days} 天`}</strong></span>
               <ChevronRight aria-hidden="true" />

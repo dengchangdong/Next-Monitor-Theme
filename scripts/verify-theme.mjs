@@ -74,8 +74,8 @@ async function walk(directory) {
 }
 
 await walk(fileURLToPath(dist))
-for (const name of ["theme.json", "preview.png"]) total += (await stat(new URL(name, root))).size
+for (const name of ["theme.json", "preview.png", "NOTICE"]) total += (await stat(new URL(name, root))).size
 if (total > 64 * MiB) throw new Error("expanded theme exceeds 64 MiB")
-if (files + directories + 2 > 2000) throw new Error("theme contains more than 2000 files and directories")
+if (files + directories + 3 > 2000) throw new Error("theme contains more than 2000 files and directories")
 
-console.log(`theme package verified: ${files + 2} files, ${(total / MiB).toFixed(2)} MiB expanded`)
+console.log(`theme package verified: ${files + 3} files, ${(total / MiB).toFixed(2)} MiB expanded`)

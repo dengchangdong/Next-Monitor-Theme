@@ -5,7 +5,7 @@
 // Nothing imports it, so the bundle never includes it.
 import {
   axisBytes, axisTop, bytes, compact, cpuName, daysUntil, despike, distro, duration, expiresIn, monthUsage, osName, pair,
-  quarters, timeTicks, uptime,
+  money, quarters, timeTicks, uptime,
 } from "./format.ts"
 
 let failed = 0
@@ -27,6 +27,7 @@ eq(bytes(1024), "1.00 KB", "bytes(1 KiB)")
 eq(bytes(10 * 1024), "10.0 KB", "两位数留一位小数")
 eq(bytes(100 * 1024), "100 KB", "三位数不留小数")
 eq(bytes(1024, 1), "1.0 KB", "digits 覆盖默认档位")
+eq(money(12.5, "CAD"), "C$12.50", "加拿大元使用无歧义货币符号")
 
 // pair: one unit when both sides share it, two when they do not.
 eq(pair(300 * 1024 ** 2, 900 * 1024 ** 2), "300.00 / 900.00 MB", "同单位只写一次")

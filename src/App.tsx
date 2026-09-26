@@ -5,17 +5,20 @@ import { ServerTables } from "@/components/ServerTable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, useNodes, type Node } from "@/lib/api"
 import { defaultThemeConfig, loadThemeConfig, type ThemeConfig } from "@/lib/config"
-import { Link, useNodeRoute } from "@/lib/route"
+import { Link, useRoute } from "@/lib/route"
+import { serverIdToServerKey } from "@/lib/server-key"
 
 type Me = { authed: boolean; github: boolean; site_name: string; public_page: boolean }
 
 const NodeDetail = lazy(() => import("@/components/NodeDetail").then((module) => ({ default: module.NodeDetail })))
+const NodeMapDialog = lazy(() => import("@/components/NodeMapDialog").then((module) => ({ default: module.NodeMapDialog })))
+const NetworkDiagnostics = lazy(() => import("@/pages/NetworkDiagnostics"))
 
 function focusSection(id: string) {
   requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }))
 }
 
-const SiteHeader = memo(function SiteHeader({ site, authed, onHome, showResources }: { site: string; authed: boolean; onHome: boolean; showResources: boolean }) {
+const SiteHeader = memo(function SiteHeader({ site, authed, onHome, onMap }: { site: string; authed: boolean; onHome: boolean; onMap: () => void }) {
   const focusSearch = () => {
     const run = () => {
       focusSection("node-list")
@@ -38,13 +41,13 @@ const SiteHeader = memo(function SiteHeader({ site, authed, onHome, showResource
           ) : (
             <Link href="/" className="probe-site-action" aria-label="搜索节点" title="搜索节点" onClick={focusSearch}><Search /></Link>
           )}
-          <Link href="/" className="probe-site-action" aria-label="查看节点状态" title="查看节点状态" onClick={() => setTimeout(() => focusSection("node-list"), 0)}><Route /></Link>
+          <Link href="/network" className="probe-site-action" aria-label="网络与 IP 检测" title="网络与 IP 检测"><Route /></Link>
           {onHome ? (
             <button type="button" className="probe-site-action" aria-label="查看今日流量" title="查看今日流量" onClick={() => window.dispatchEvent(new Event("monitor:show-traffic"))}><ArrowDownUp /></button>
           ) : (
             <Link href="/" className="probe-site-action" aria-label="查看今日流量" title="查看今日流量" onClick={() => setTimeout(() => window.dispatchEvent(new Event("monitor:show-traffic")), 50)}><ArrowDownUp /></Link>
           )}
-          {showResources && <Link href="/" className="probe-site-action" aria-label="查看资源概览" title="查看资源概览" onClick={() => setTimeout(() => focusSection("resource-status"), 0)}><Map /></Link>}
+          <button type="button" className="probe-site-action" aria-label="打开节点地图" title="节点地图" onClick={onMap}><Map /></button>
           <a className="probe-site-action" href="/dashboard/" aria-label={authed ? "管理后台" : "登录后台"} title={authed ? "管理后台" : "登录后台"}><UserRound /></a>
         </nav>
       </div>
@@ -79,8 +82,9 @@ export default function App() {
   const [me, setMe] = useState<Me | null>(null)
   const [themeConfig, setThemeConfig] = useState<ThemeConfig | null>(null)
   const [meError, setMeError] = useState("")
+  const [mapOpen, setMapOpen] = useState(false)
   const { nodes, error, closed } = useNodes()
-  const open = useNodeRoute()
+  const route = useRoute()
 
   const loadMe = useCallback(() => {
     return api<Me>("/me")
@@ -107,29 +111,32 @@ export default function App() {
   // Live frames replace data in place. The page shell, header and each keyed
   // node row stay mounted, so filters, scroll position and open dialogs survive.
   const sorted = useMemo(() => [...(nodes ?? [])].sort((a, b) => a.sort - b.sort || a.id - b.id), [nodes])
-  const selected: Node | undefined = sorted.find((node) => node.id === open)
-  const site = me?.site_name || "Monitor"
+  const selected: Node | undefined = route.kind === "server" ? sorted.find((node) => serverIdToServerKey(node.id) === route.key) : undefined
+  const site = me?.site_name || "节点监控"
 
   useEffect(() => {
-    document.title = [selected?.name, site].filter(Boolean).join(" - ")
-  }, [selected?.name, site])
+    const page = route.kind === "network" ? "网络与 IP 检测" : route.kind === "missing" ? "页面不存在" : selected?.name
+    document.title = [page, site].filter(Boolean).join(" - ")
+  }, [route.kind, selected?.name, site])
 
   if (me && !me.public_page && !me.authed) return null
 
   return (
     <div className="probe-workspace">
-      <SiteHeader site={site} authed={Boolean(me?.authed)} onHome={open === null} showResources={themeConfig?.show_resources ?? defaultThemeConfig.show_resources} />
+      <SiteHeader site={site} authed={Boolean(me?.authed)} onHome={route.kind === "home"} onMap={() => setMapOpen(true)} />
       <main className="probe-main">
         {meError && !me ? (
           <div className="status-page"><div className="status-error" role="alert"><strong>站点信息加载失败</strong><span>{meError}</span><button type="button" onClick={loadMe}>重试</button></div></div>
-        ) : !me || !nodes || !themeConfig ? (
+        ) : !me || (route.kind !== "network" && (!nodes || !themeConfig)) ? (
           <LoadingPage />
         ) : (
           <>
             {error && <div className="status-error status-error--floating" role="alert"><strong>实时连接暂时不可用</strong><span>{error}</span></div>}
-            {open === null ? (
-              <ServerTables nodes={sorted} config={themeConfig} />
-            ) : selected ? (
+            {route.kind === "home" ? (
+              <ServerTables nodes={sorted} config={themeConfig ?? defaultThemeConfig} />
+            ) : route.kind === "network" ? (
+              <Suspense fallback={<LoadingPage />}><NetworkDiagnostics /></Suspense>
+            ) : route.kind === "server" && selected ? (
               <Suspense fallback={<div className="server-detail-page"><Skeleton className="probe-skeleton--detail-head" /><Skeleton className="probe-skeleton--detail-panel" /><Skeleton className="probe-skeleton--detail-chart" /></div>}>
                 <NodeDetail node={selected} config={themeConfig ?? defaultThemeConfig} />
               </Suspense>
@@ -139,6 +146,7 @@ export default function App() {
           </>
         )}
       </main>
+      {mapOpen && <Suspense fallback={null}><NodeMapDialog nodes={sorted} open={mapOpen} onClose={() => setMapOpen(false)} /></Suspense>}
     </div>
   )
 }

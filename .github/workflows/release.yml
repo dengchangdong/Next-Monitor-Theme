@@ -32,7 +32,7 @@ jobs:
       # <themes>/<short>/, and theme.tar.gz is the one asset name its update button
       # fetches. preview.png sits beside theme.json because it is the panel's
       # thumbnail rather than content the theme serves.
-      - run: tar czf theme.tar.gz dist theme.json preview.png
+      - run: tar czf theme.tar.gz dist theme.json preview.png NOTICE
       - run: test "$(stat -c%s theme.tar.gz)" -le $((32 * 1024 * 1024))
       - run: sha256sum theme.tar.gz | cut -d' ' -f1 | tee theme.tar.gz.sha256
 
