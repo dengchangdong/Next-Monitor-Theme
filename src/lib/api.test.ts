@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import assert from "node:assert/strict"
-import { groupFilter, groupsOf, nodeMatchesGroup, safeNodes, type Node } from "./api.ts"
+import { groupFilter, groupsOf, nodeMatchesGroup, reconcileNodes, safeNodes, type Node } from "./api.ts"
 
 const node = { id: 1, metrics: { uptime: 100, cpu: 1, load: [0.1, 0.2, 0.3],
   mem_total: 1024, mem_used: 512, swap_total: 0, swap_used: 0, disk_total: 2048, disk_used: 1024,
@@ -26,3 +26,14 @@ assert.equal(nodeMatchesGroup({}, "ungrouped"), true)
 assert.equal(nodeMatchesGroup({ group: "ungrouped" }, "ungrouped"), false)
 assert.equal(safeNodes([{ ...node, online: true, metrics: null }])[0].metrics, null)
 console.log("group control values cannot collide with names")
+
+const unchanged = { ...node, metrics: { ...node.metrics, load: [...node.metrics!.load] } } as Node
+const held = reconcileNodes([node], [unchanged])
+assert.equal(held[0], node)
+assert.equal(reconcileNodes(held, [unchanged]), held)
+
+const changed = { ...unchanged, metrics: { ...unchanged.metrics!, cpu: 2 } }
+const refreshed = reconcileNodes(held, [changed])
+assert.notEqual(refreshed, held)
+assert.equal(refreshed[0], changed)
+console.log("live refresh preserves unchanged data and replaces changed values only")

@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils"
 
 let flagAssetsPromise: Promise<typeof import("@/lib/flag-assets")> | null = null
 
-function normalizeCountryCode(raw: string) {
-  const code = raw.trim().toLowerCase()
+function normalizeCountryCode(raw: unknown) {
+  const code = typeof raw === "string" ? raw.trim().toLowerCase() : ""
   return /^[a-z]{2}$/.test(code) ? code : "xx"
 }
 

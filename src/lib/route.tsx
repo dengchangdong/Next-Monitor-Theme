@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentProps } from "react"
 
 const read = () => {
-  const match = location.pathname.match(/^\/node\/(\d+)/)
+  const match = location.pathname.match(/^\/node\/(\d+)\/?$/)
   return match ? Number(match[1]) : null
 }
 

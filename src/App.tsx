@@ -1,5 +1,5 @@
 import { Activity, ArrowDownUp, Map, Route, Search, UserRound } from "lucide-react"
-import { lazy, Suspense, useCallback, useEffect, useState } from "react"
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from "react"
 
 import { ServerTables } from "@/components/ServerTable"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -15,7 +15,7 @@ function focusSection(id: string) {
   requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }))
 }
 
-function SiteHeader({ site, authed, onHome, showResources }: { site: string; authed: boolean; onHome: boolean; showResources: boolean }) {
+const SiteHeader = memo(function SiteHeader({ site, authed, onHome, showResources }: { site: string; authed: boolean; onHome: boolean; showResources: boolean }) {
   const focusSearch = () => {
     const run = () => {
       focusSection("node-list")
@@ -45,12 +45,12 @@ function SiteHeader({ site, authed, onHome, showResources }: { site: string; aut
             <Link href="/" className="probe-site-action" aria-label="查看今日流量" title="查看今日流量" onClick={() => setTimeout(() => window.dispatchEvent(new Event("monitor:show-traffic")), 50)}><ArrowDownUp /></Link>
           )}
           {showResources && <Link href="/" className="probe-site-action" aria-label="查看资源概览" title="查看资源概览" onClick={() => setTimeout(() => focusSection("resource-status"), 0)}><Map /></Link>}
-          <a className="probe-site-action" href="/admin/" aria-label={authed ? "管理后台" : "登录后台"} title={authed ? "管理后台" : "登录后台"}><UserRound /></a>
+          <a className="probe-site-action" href="/dashboard/" aria-label={authed ? "管理后台" : "登录后台"} title={authed ? "管理后台" : "登录后台"}><UserRound /></a>
         </nav>
       </div>
     </header>
   )
-}
+})
 
 function LoadingPage() {
   return (
@@ -101,10 +101,12 @@ export default function App() {
   }, [closed, loadMe])
 
   useEffect(() => {
-    if (me && !me.public_page && !me.authed) location.href = "/admin/"
+    if (me && !me.public_page && !me.authed) location.href = "/dashboard/"
   }, [me])
 
-  const sorted = [...(nodes ?? [])].sort((a, b) => a.sort - b.sort || a.id - b.id)
+  // Live frames replace data in place. The page shell, header and each keyed
+  // node row stay mounted, so filters, scroll position and open dialogs survive.
+  const sorted = useMemo(() => [...(nodes ?? [])].sort((a, b) => a.sort - b.sort || a.id - b.id), [nodes])
   const selected: Node | undefined = sorted.find((node) => node.id === open)
   const site = me?.site_name || "Monitor"
 

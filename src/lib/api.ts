@@ -139,6 +139,44 @@ export function safeNodes(nodes: Node[]): Node[] {
   })
 }
 
+function sameMetrics(left: Metrics | null, right: Metrics | null): boolean {
+  if (left === right) return true
+  if (!left || !right) return false
+  const keys = Object.keys(right) as (keyof Metrics)[]
+  return keys.length === Object.keys(left).length && keys.every((key) => key === "load"
+    ? left.load.length === right.load.length && left.load.every((value, index) => value === right.load[index])
+    : left[key] === right[key])
+}
+
+function sameNode(left: Node, right: Node): boolean {
+  const leftRecord = left as unknown as Record<string, unknown>
+  const rightRecord = right as unknown as Record<string, unknown>
+  const keys = Object.keys(rightRecord)
+  return keys.length === Object.keys(leftRecord).length
+    && keys.every((key) => key === "metrics" ? sameMetrics(left.metrics, right.metrics) : Object.is(leftRecord[key], rightRecord[key]))
+}
+
+/**
+ * Keeps unchanged node objects and the whole array stable between live frames.
+ * React can then update only values that actually changed without remounting the
+ * page shell, rows, filters or dialogs.
+ */
+export function reconcileNodes(previous: Node[] | null, incoming: Node[]): Node[] {
+  if (!previous) return incoming
+  const old = new Map(previous.map((node) => [node.id, node]))
+  let changed = previous.length !== incoming.length
+  const next = incoming.map((node, index) => {
+    const held = old.get(node.id)
+    if (!held || !sameNode(held, node)) {
+      changed = true
+      return node
+    }
+    if (previous[index] !== held) changed = true
+    return held
+  })
+  return changed ? next : previous
+}
+
 /**
  * Live node list. Uses the WebSocket the hub pushes every two seconds, falling
  * back to polling if it cannot be established.
@@ -164,7 +202,8 @@ export function useNodes() {
         return
       }
       try {
-        setNodes(safeNodes(list as Node[]))
+        const next = safeNodes(list as Node[])
+        setNodes((previous) => reconcileNodes(previous, next))
         setError(null)
         setClosed(false)
       } catch {

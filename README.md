@@ -11,6 +11,7 @@
 - 节点详情、资源环图、速度历史和网络延迟监控
 - 桌面、平板和移动端响应式布局
 - 图表与国旗资源按需加载，降低首页脚本体积
+- WebSocket 自动刷新只替换变化的数据，页面框架、筛选状态、滚动位置和对话框保持不变
 - 完整的加载、空数据、异常和离线状态
 - 支持 hub 主题设置：站点公告、首页区块和详情图表开关
 - 兼容旧版 hub：主题设置接口不存在时自动采用默认配置
@@ -58,6 +59,8 @@ npm run check:theme
 ```
 
 `check:theme` 会检查 manifest、版本一致性、构建入口、文件数量、单文件大小和解压总量。GitHub Release 工作流还会检查压缩包不超过 hub 的 32 MiB 上传限制。
+
+安全威胁模型、依赖审计和剩余风险见 [`SECURITY.md`](SECURITY.md)。
 
 主题只访问官方契约中的同源接口：`/api/me`、`/api/nodes`、`/api/nodes/{id}/metrics`、`/api/ws` 和 `/api/themes/nezhadash/config`。
 
