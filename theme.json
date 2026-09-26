@@ -1,0 +1,24 @@
+{
+  "name": "NezhaDash",
+  "short": "nezhadash",
+  "description": "面向极简探针的 NezhaDash 风格公开状态页",
+  "version": "2.1.0",
+  "author": "dengchangdong",
+  "url": "https://github.com/dengchangdong/Next-Monitor-Theme",
+  "config": [
+    { "type": "title", "label": "首页" },
+    {
+      "key": "notice",
+      "type": "text",
+      "label": "站点公告",
+      "default": "",
+      "help": "显示在系统状态下方，留空不显示；内容按纯文本处理"
+    },
+    { "key": "show_network", "type": "boolean", "label": "显示实时网络汇总", "default": true },
+    { "key": "show_resources", "type": "boolean", "label": "显示资源使用汇总", "default": true },
+    { "key": "show_renewal", "type": "boolean", "label": "显示到期与续费汇总", "default": true },
+    { "type": "title", "label": "节点详情" },
+    { "key": "show_speed_chart", "type": "boolean", "label": "显示网络速度图表", "default": true },
+    { "key": "show_latency_chart", "type": "boolean", "label": "显示延迟监控图表", "default": true }
+  ]
+}
